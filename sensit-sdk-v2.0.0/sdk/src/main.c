@@ -19,10 +19,25 @@
 #include "fxos8700.h"
 #include "discovery.h"
 
+
+#define VIBRATION_THRESHOLD                0x10 
+#define VIBRATION_COUNT                    2
 /******* GLOBAL VARIABLES ******************************************/
-u8 firmware_version[] = "TEMPLATE";
+
+u8 firmware_version[] = "TEMPLATES";
 
 /*******************************************************************/
+
+
+
+
+/*typedef struct
+{
+    u8 EVENT_ID : 4;
+};*/
+
+
+//data_s;
 
 int main()
 {
@@ -30,6 +45,8 @@ int main()
     button_e btn;
     u16 battery_level;
     bool send = FALSE;
+    discovery_data_s data = {0};
+    discovery_payload_s playload;
 
     /* Start of initialization */
 
@@ -51,7 +68,7 @@ int main()
     /* Initialize accelerometer */
     err = FXOS8700_init();
     ERROR_parser(err);
-
+    FXOS8700_set_transient_mode(FXOS8700_RANGE_2G, VIBRATION_THRESHOLD, VIBRATION_COUNT);
     /* Clear pending interrupt */
     pending_interrupt = 0;
 
@@ -83,11 +100,12 @@ int main()
             /* RGB Led OFF */
             SENSIT_API_set_rgb_led(RGB_OFF);
 
-            if (btn == BUTTON_THREE_PRESSES)
+            if (data.door == TRUE)
             {
+
                 /* Force a RTC alarm interrupt to do a new measurement */
                 pending_interrupt |= INTERRUPT_MASK_RTC;
-
+                //data.event_counter++;
                 /* Set send Sigfox */
                 send = TRUE;
             }
@@ -111,16 +129,23 @@ int main()
         /* Accelerometer interrupt handler */
         if ((pending_interrupt & INTERRUPT_MASK_FXOS8700) == INTERRUPT_MASK_FXOS8700)
         {
+            send = TRUE;
             /* Clear interrupt */
             pending_interrupt &= ~INTERRUPT_MASK_FXOS8700;
         }
-
+        
         /* Check if we need to send a message */
         if (send == TRUE)
         {
+            DISCOVERY_build_payload(&playload,MODE_DOOR,&data);
+
+            //data_s data = {};
+            //data.EVENT_ID = 0b1111;
 
             /* Send the message */
-            err = RADIO_API_send_message(RGB_MAGENTA, (u8 *)"Fer-Bun", 7, FALSE, NULL);
+            err = RADIO_API_send_message(RGB_BLUE, (u8 *)"T", 1, FALSE, NULL);
+            //err = RADIO_API_send_message(RGB_BLUE, (u8 *)&playload, 1, FALSE, NULL);
+           // err = RADIO_API_send_message(RGB_GREEN, (u8 *)&u8, 4, FALSE, NULL);
             /* Parse the error code */
             ERROR_parser(err);
 
