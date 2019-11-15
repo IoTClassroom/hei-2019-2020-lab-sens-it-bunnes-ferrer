@@ -18,7 +18,7 @@
 #include "ltr329.h"
 #include "fxos8700.h"
 #include "discovery.h"
-
+#include <time.h>
 
 #define VIBRATION_THRESHOLD                0x10 
 #define VIBRATION_COUNT                    2
@@ -45,6 +45,7 @@ int main()
     button_e btn;
     u16 battery_level;
     bool send = FALSE;
+    bool detection = FALSE;
     discovery_data_s data = {0};
     discovery_payload_s playload;
 
@@ -129,7 +130,9 @@ int main()
         /* Accelerometer interrupt handler */
         if ((pending_interrupt & INTERRUPT_MASK_FXOS8700) == INTERRUPT_MASK_FXOS8700)
         {
+            detection = TRUE;
             send = TRUE;
+            data.event_counter++;
             /* Clear interrupt */
             pending_interrupt &= ~INTERRUPT_MASK_FXOS8700;
         }
@@ -137,20 +140,22 @@ int main()
         /* Check if we need to send a message */
         if (send == TRUE)
         {
-            DISCOVERY_build_payload(&playload,MODE_DOOR,&data);
+            if(detection){
 
-            //data_s data = {};
+            DISCOVERY_build_payload(&playload,MODE_DOOR,&data);
             //data.EVENT_ID = 0b1111;
 
             /* Send the message */
-            err = RADIO_API_send_message(RGB_BLUE, (u8 *)"T", 1, FALSE, NULL);
-            //err = RADIO_API_send_message(RGB_BLUE, (u8 *)&playload, 1, FALSE, NULL);
-           // err = RADIO_API_send_message(RGB_GREEN, (u8 *)&u8, 4, FALSE, NULL);
+            err = RADIO_API_send_message(RGB_BLUE, (u8 *)&playload, 1, FALSE, NULL);
             /* Parse the error code */
             ERROR_parser(err);
 
             /* Clear send flag */
             send = FALSE;
+            }
+            else{
+                
+            }
         }
 
         /* Check if all interrupt have been clear */
@@ -162,4 +167,10 @@ int main()
     } /* End of while */
 }
 
+void my_delay(int i)    /*Pause l'application pour i seconds*/
+{
+    clock_t start,end;
+    start=clock();
+    while(((end=clock())-start)<=i*CLOCKS_PER_SEC);
+}
 /*******************************************************************/
